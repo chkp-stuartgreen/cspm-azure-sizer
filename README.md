@@ -7,8 +7,6 @@ These queries can be used in the Azure Resource Graph explorer to find resources
 ```kql
 resources
 | where type == "microsoft.compute/virtualmachines" or type =~ "microsoft.sql/servers" |
-| ------------------------------------------------------------------------------------ |
-
 | extend prop = parse_json(properties)
 
 | where (isnotempty(prop.hardwareProfile.vmSize) and prop.hardwareProfile.vmSize !contains "A0" and prop.extended.instanceView.powerState.displayStatus =~ "VM running") or (isnotempty(prop.hardwareProfile.vmSize) and prop.hardwareProfile.vmSize !contains "A0" and prop.extended.instanceView.powerState.displayStatus =~ "VM running")
