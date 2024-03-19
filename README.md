@@ -18,13 +18,14 @@ or isempty(prop.hardwareProfile.vmSize)
 
 ```kql
 resources
-| where type == "microsoft.containerservice/managedclusters"
-| extend properties.agentPoolProfiles
-| project subscriptionId, name, pool = (properties.agentPoolProfiles)
-| mv-expand pool
-| project subscription = subscriptionId, cluster = name, size = pool.vmSize, nodecount = toint(pool.['count'] * 3)
-| summarize sum(nodecount)
-| project BillableAssetsNodes = sum_nodecount
+| where type =~ 'microsoft.containerservice/managedclusters'
+| extend agentPoolProfiles = properties['agentPoolProfiles']
+| project subscriptionId, clusterName = name, agentPoolProfiles, organizationUnit = tostring(tags['OrganizationUnit']) // Convert OU info to string
+| mv-expand agentPoolProfiles
+| extend vmSize = agentPoolProfiles['vmSize'], nodeCount = toint(agentPoolProfiles['count']) * 3
+| project subscriptionId, clusterName, organizationUnit, vmSize, nodeCount
+| summarize TotalNodeCount = sum(nodeCount) by subscriptionId, clusterName, tostring(organizationUnit) // Ensure organizationUnit is cast to string here as well
+| order by subscriptionId, clusterName, organizationUnit
 ```
 
 ## Azure Functions
@@ -32,6 +33,6 @@ resources
 ```kql
 resources
 | where type == "microsoft.web/sites" and kind startswith "functionapp"
-| summarize count(name)
-| project BillableAssetsFunctions = ceiling(count_name / 60.0)
+| summarize count_name = count(name) by subscriptionId
+| project SubscriptionId = subscriptionId, BillableAssetsFunctions = ceiling(count_name / 60.0)
 ```
